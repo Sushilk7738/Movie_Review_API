@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-
+from .pagination import MoviePagination
 
 
 class GenreListView(APIView):
@@ -84,8 +84,9 @@ class MovieListView(APIView):
         search = request.query_params.get('search')
         genre = request.query_params.get('genre')
         rating = request.query_params.get('rating')
+        ordering = request.query_params.get('ordering')
         
-        movies = Movie.objects.select_related('genre')
+        movies = Movie.objects.select_related('genre').order_by('id')
 
         if search:
             movies = movies.filter(
@@ -101,9 +102,22 @@ class MovieListView(APIView):
             movies = movies.filter(
                 rating = rating
             )
+            
+        if ordering:
+            movies = movies.order_by(ordering)
+
+        paginator = MoviePagination()
         
-        serializer = MovieSerializer(movies, many = True)
-        return Response(serializer.data)
+        paginated_movies = paginator.paginate_queryset(
+            movies, 
+            request
+        )
+            
+        
+        serializer = MovieSerializer(paginated_movies, many = True)
+        return paginator.get_paginated_response(
+            serializer.data
+        )
 
     def post(self , request):
         serializer = MovieWriteSerializer(data=request.data)
