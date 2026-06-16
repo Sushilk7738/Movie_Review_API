@@ -19,6 +19,7 @@ class MovieWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = "__all__"
+        read_only_fields = ['slug']
 
     def validate_rating(self, value):
         if value < 0 or value > 10:
