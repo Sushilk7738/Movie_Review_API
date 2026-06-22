@@ -1,13 +1,17 @@
 from django.shortcuts import render
 from .models import Review, Movie, Genre
-from .serializers import MovieWriteSerializer, ReviewSerializer, MovieSerializer, GenreSerializer
+from .serializers import MovieWriteSerializer, ReviewSerializer, MovieSerializer, GenreSerializer, RegisterSerializer
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from .pagination import MoviePagination
 from django.core.cache import cache
-from rest_framework.throttling import AnonRateThrottle
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+# from rest_framework.throttling import AnonRateThrottle
 
 
 class GenreListView(APIView):
@@ -83,7 +87,7 @@ class GenreDetailAPIView(APIView):
 
 class MovieListView(APIView):
     
-    throttle_classes = [AnonRateThrottle]
+    # throttle_classes = [AnonRateThrottle]
     def get(self, request):
         search = request.query_params.get('search')
         genre = request.query_params.get('genre')
@@ -236,5 +240,53 @@ class ReviewDetailAPIView(APIView):
         review.delete()
         return Response({"message": "Review deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
+
+
+class RegisterAPIView(APIView):
+    def post(self, request):
+        serializer = RegisterSerializer(data = request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "User registered successfully!"}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginAPIView(APIView):
+    def post(self, request):
+        print("LOGIN API CALLED")
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(
+            username = username,
+            password = password
+        )
+
+        if user is None:
+            return Response({"error": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access" : str(refresh.access_token)
+            },
+            status=status.HTTP_200_OK
+        )
+        
+        
+class LogoutAPIView(APIView):
+    def post(self, request):
+        try:
+            refrest_token = request.data.get('refresh')
+            token = RefreshToken(refrest_token)
+
+            token.blacklist()
+            return Response({"message": "Logout successfull !"}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
         
