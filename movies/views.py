@@ -9,6 +9,8 @@ from .pagination import MoviePagination
 from django.core.cache import cache
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from movies.tasks import send_movie_notification
 
 
 # from rest_framework.throttling import AnonRateThrottle
@@ -131,6 +133,10 @@ class MovieListView(APIView):
         serializer = MovieWriteSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+
+            send_movie_notification.delay(
+                serializer.instance.title
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -195,6 +201,7 @@ class MovieDetailAPIView(APIView):
 
 
 class ReviewListView(APIView):
+    permission_classes = [IsAdminUser]
     def get(self, request):
         reviews = Review.objects.all()
         serializer = ReviewSerializer(reviews, many=True)

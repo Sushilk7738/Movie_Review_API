@@ -153,3 +153,5 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS':False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
